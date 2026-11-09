@@ -15,7 +15,7 @@ import {
 } from "../core/layout";
 import { Sound } from "../core/sound";
 import { State } from "../core/state";
-import { SPOTIFY_ID, Spotify, islandDances } from "../core/spotify";
+import { SOUNDCLOUD_ID, SPOTIFY_ID, islandDances } from "../core/spotify";
 import { BotEngine, hexToRGB } from "../mochi/engine";
 import { Greeting } from "../mochi/greeting";
 import { createMiniBot, pruneMiniBots, syncMiniBotStates, tickMiniBots } from "../mochi/minibots";
@@ -233,6 +233,7 @@ export class Island {
         } else if (task.id === "integration_n8n") void Bridge.openN8n();
         else if (task.id === "integration_gitea") void Bridge.openGitea();
         else if (task.id === SPOTIFY_ID) void Bridge.spotifyOpen();
+        else if (task.id === SOUNDCLOUD_ID) void Bridge.soundcloudOpen();
         else if (urls[task.id]) void Bridge.openUrl(urls[task.id]);
       },
       openUrl: (url) => {
@@ -896,13 +897,13 @@ export class Island {
    */
   private updateClosed() {
     const style = closedIsland(State.settings.closedIsland);
-    const track = Spotify.state.track;
+    const track = State.playingTrack;
     const content: ClosedContent | null = State.mode === "hidden" || this.collapsed
       ? closedContent(style, {
         now: new Date(),
         locale: language(),
         planUsage: State.planUsage,
-        music: State.spotifyPlaying && track ? { title: track.title, artist: track.artist } : null,
+        music: track ? { title: track.title, artist: track.artist } : null,
       })
       : null;
     const key = content ? `${style}|${content.text}|${content.dot ?? ""}|${content.note}` : style;

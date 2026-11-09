@@ -23,8 +23,8 @@ import { buildRecap } from "./recap";
 import { buildWardrobe } from "./wardrobe";
 import { buildUpdate } from "./update";
 import { buildWhatsNew } from "./whatsnew";
-import { buildSpotifyCard, buildSpotifyPill, type SpotifyPillHost } from "./spotify";
-import { SPOTIFY_ID } from "../core/spotify";
+import { SOUNDCLOUD_SOURCE, SPOTIFY_SOURCE, buildSpotifyCard, buildSpotifyPill, type SpotifyCardHost, type SpotifyPillHost } from "./spotify";
+import { MUSIC_PLAYERS } from "../core/spotify";
 import { buildWhatsAppCard } from "./whatsapp";
 import { WHATSAPP_ID } from "../core/whatsapp";
 import { MAIL_ID } from "../core/mail";
@@ -211,8 +211,10 @@ function buildOverview(actions: ViewActions): ViewHost {
   let planTimer: number | null = null;
   // Spotify's card and pill are kept and updated in place: the progress bar
   // runs on, and a slider being dragged must not be rebuilt under the pointer.
-  const spotifyCard = buildSpotifyCard();
-  let spotifyPill: SpotifyPillHost | null = null;
+  // SoundCloud's too: the same views on another player.
+  const musicSources = [SPOTIFY_SOURCE, SOUNDCLOUD_SOURCE];
+  const musicCards = new Map<string, SpotifyCardHost>(musicSources.map((src) => [src.id, buildSpotifyCard(src)]));
+  let musicPills: SpotifyPillHost[] = [];
   // WhatsApp's card too: its reply field keeps the draft and the keyboard while messages arrive.
   // Mail's card too (classic Outlook): the search field keeps its text and the keyboard.
   const mailCard = buildMailCard({ keyboard: (on) => actions.keyboard(on) });
@@ -378,15 +380,16 @@ function buildOverview(actions: ViewActions): ViewHost {
           }));
         }
         ticker.sync(task);
-      } else if (task && task.id === SPOTIFY_ID) {
+      } else if (task && task.id in MUSIC_PLAYERS) {
         // Its own card for every state: playing, idle, not installed.
-        if (mode !== "spotify") {
+        const musicCard = musicCards.get(task.id)!;
+        if (mode !== "spotify" || musicCard.el.parentElement !== leftBody) {
           clear(leftBody);
-          leftBody.append(spotifyCard.el);
+          leftBody.append(musicCard.el);
           mode = "spotify";
           cardKey = "";
         }
-        spotifyCard.sync();
+        musicCard.sync();
       } else if (task && task.id === MAIL_ID) {
         if (mode !== "mail") {
           clear(leftBody);
@@ -433,18 +436,20 @@ function buildOverview(actions: ViewActions): ViewHost {
       if (pillKey !== pillIds) {
         pillIds = pillKey;
         clear(pills);
-        spotifyPill = null;
+        musicPills = [];
         for (const t of others) {
-          if (t.id === SPOTIFY_ID) {
-            spotifyPill = buildSpotifyPill(t, () => actions.setFocus(t.id));
-            pills.append(spotifyPill.el);
+          const src = musicSources.find((m) => m.id === t.id);
+          if (src) {
+            const pill = buildSpotifyPill(t, () => actions.setFocus(t.id), src);
+            musicPills.push(pill);
+            pills.append(pill.el);
           } else {
             pills.append(buildPill(t, actions));
           }
         }
         pruneMiniBots();
       }
-      spotifyPill?.sync();
+      for (const pill of musicPills) pill.sync();
     },
   };
 }

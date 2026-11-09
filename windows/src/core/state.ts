@@ -12,7 +12,7 @@ import type { FileDiff } from "./diff";
 import type { Bindings } from "./shortcuts";
 import { DEFAULT_OUTFIT, type Outfit } from "../mochi/wardrobe";
 import { pillColor } from "./pill-colors";
-import { Spotify, musicPlaying } from "./spotify";
+import { MUSIC_PLAYERS, musicPlaying, type SpotifyTrack } from "./spotify";
 
 export type AgentSource = "claudeCode" | "n8n" | "agent";
 export type PillBadge = "approval" | "finished" | "error";
@@ -301,9 +301,24 @@ class AppState {
     return this.stateOverride ?? this.focusTask?.state ?? "idle";
   }
 
-  /** Spotify plays on a declared pill: Mochi dances (Linux; never on Windows yet). */
+  /**
+   * Music plays on a declared pill — Spotify, or SoundCloud in the browser:
+   * Mochi dances (Linux; never on Windows yet).
+   */
   get spotifyPlaying(): boolean {
-    return musicPlaying(Spotify.state, sanitizeDeclared(this.settings, this.os).activeIntegrations);
+    return Object.keys(MUSIC_PLAYERS).some((id) => this.playingOn(id));
+  }
+
+  /** That music pill is declared and its player plays. */
+  playingOn(id: string): boolean {
+    const p = MUSIC_PLAYERS[id];
+    return p != null && musicPlaying(p.state, sanitizeDeclared(this.settings, this.os).activeIntegrations, id);
+  }
+
+  /** The track playing, from whichever music pill plays it. */
+  get playingTrack(): SpotifyTrack | null {
+    const id = Object.keys(MUSIC_PLAYERS).find((x) => this.playingOn(x));
+    return id ? MUSIC_PLAYERS[id].state.track : null;
   }
 
   get otherTasks(): AgentTask[] {

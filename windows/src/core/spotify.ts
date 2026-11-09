@@ -41,15 +41,24 @@ export const IDLE_SPOTIFY: SpotifyState = {
   position: 0, positionAt: 0, shuffle: false, repeat: false, volume: 50,
 };
 
-/** The page's copy of the player, and the cover of the track that has one. */
-export const Spotify = {
-  state: { ...IDLE_SPOTIFY } as SpotifyState,
-  artwork: null as { artUrl: string; dataUrl: string } | null,
-};
+/** A player's copy on the page, and the cover of the track that has one. */
+export interface Player {
+  state: SpotifyState;
+  artwork: { artUrl: string; dataUrl: string } | null;
+}
+
+export const Spotify: Player = { state: { ...IDLE_SPOTIFY }, artwork: null };
+
+/** SoundCloud in a browser tab, read through MPRIS like Spotify (src-tauri/src/soundcloud.rs, Linux). */
+export const SOUNDCLOUD_ID = "integration_soundcloud";
+export const SOUNDCLOUD_ORANGE = "#FF5500";
+export const SoundCloud: Player = { state: { ...IDLE_SPOTIFY, installed: true }, artwork: null };
+
+/** The pills that play music, and their players. */
+export const MUSIC_PLAYERS: Readonly<Record<string, Player>> = { [SPOTIFY_ID]: Spotify, [SOUNDCLOUD_ID]: SoundCloud };
 
 /** The cover to show for the current track, if it has arrived. */
-export function currentArtwork(s: SpotifyState = Spotify.state): string | null {
-  const art = Spotify.artwork;
+export function currentArtwork(s: SpotifyState = Spotify.state, art = Spotify.artwork): string | null {
   return art && s.track?.artUrl && art.artUrl === s.track.artUrl ? art.dataUrl : null;
 }
 
@@ -91,9 +100,9 @@ export function volumeLevel(volume: number): 0 | 1 | 2 | 3 {
   return 3;
 }
 
-/** Music is playing on a declared Spotify pill. */
-export function musicPlaying(s: SpotifyState, activeIntegrations: readonly string[]): boolean {
-  return s.playing && s.track != null && activeIntegrations.includes(SPOTIFY_ID);
+/** Music is playing on a declared music pill (Spotify unless said). */
+export function musicPlaying(s: SpotifyState, activeIntegrations: readonly string[], id = SPOTIFY_ID): boolean {
+  return s.playing && s.track != null && activeIntegrations.includes(id);
 }
 
 /** The states Mochi dances in; the rest (an alert, an error, sleep) win. */
@@ -112,7 +121,7 @@ export function islandDances(o: {
 }): boolean {
   if (!o.music || !DANCE_STATES.has(o.state)) return false;
   if (o.mode === "compact") return true;
-  return o.mode === "expanded" && o.view === "overview" && o.focusId === SPOTIFY_ID;
+  return o.mode === "expanded" && o.view === "overview" && o.focusId != null && o.focusId in MUSIC_PLAYERS;
 }
 
 /** Mochi on the desktop: the compact island's rules (DesktopMochi.swift). */

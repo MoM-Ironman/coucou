@@ -10,9 +10,9 @@ import { registerPhoneLink } from "./island/phone-link";
 import { registerIntegrationHandlers, refreshConfigured } from "./island/integrations";
 import { registerShortcutHandlers } from "./island/shortcuts";
 import { registerVoiceHandlers } from "./island/voice";
-import { applySpotify, registerSpotifyHandlers } from "./island/spotify";
+import { applySoundCloud, applySpotify, registerSpotifyHandlers } from "./island/spotify";
 import { registerWhatsAppHandlers } from "./island/whatsapp";
-import { SPOTIFY_ID } from "./core/spotify";
+import { SOUNDCLOUD_ID, SPOTIFY_ID } from "./core/spotify";
 import { Recap } from "./recap/recap";
 import { Updates } from "./island/update";
 import { WhatsNew } from "./whats-new/controller";
@@ -170,6 +170,9 @@ async function main() {
   // Rust may have read Spotify before this page listened: ask once.
   if (State.settings.activeIntegrations.includes(SPOTIFY_ID)) {
     void Bridge.spotifyRefresh().then((s) => s && applySpotify(island, s));
+  }
+  if (State.settings.activeIntegrations.includes(SOUNDCLOUD_ID)) {
+    void Bridge.soundcloudRefresh().then((s) => s && applySoundCloud(island, s));
   }
 
   // Monday recap: app start (greeting over), an agent starting work, waking up.

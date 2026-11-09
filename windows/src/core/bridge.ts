@@ -457,6 +457,13 @@ export const Bridge = {
   /** Whether there is a Spotify to launch (Settings). */
   spotifyInstalled: () => call<boolean>("spotify_installed"),
 
+  // ── SoundCloud in the browser (src-tauri/src/soundcloud.rs, Linux) ─────────
+  soundcloudRefresh: () => call<SpotifyState | null>("soundcloud_refresh"),
+  soundcloudControl: (action: SpotifyAction, value?: number) =>
+    call<boolean>("soundcloud_control", { action, value: value ?? null }),
+  /** Brings the playing tab's browser forward, else opens soundcloud.com. */
+  soundcloudOpen: () => call<boolean>("soundcloud_open"),
+
   // ── WhatsApp (src-tauri/src/whatsapp) ─────────────────────────────────────
   /** The island's copy, asked once at start (then the "whatsapp" event). Island only. */
   whatsappIsland: () => call<WaIslandView>("whatsapp_island"),

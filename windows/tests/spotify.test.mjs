@@ -8,12 +8,12 @@ import assert from "node:assert/strict";
 import { emit, sent } from "./tauri.mjs";
 import { installFakeDom } from "./fakedom.mjs";
 import {
-  IDLE_SPOTIFY, SPOTIFY_ID, Spotify, currentArtwork, desktopDances, formatTime, isAd, islandDances,
+  IDLE_SPOTIFY, SOUNDCLOUD_ID, SPOTIFY_ID, SoundCloud, Spotify, currentArtwork, desktopDances, formatTime, isAd, islandDances,
   musicPlaying, spotifyPosition, volumeLevel, withPlaying,
 } from "../src/core/spotify.ts";
 import { BotEngine, danceTransform, stepDanceLevel } from "../src/mochi/engine.ts";
 import { registerSpotifyHandlers } from "../src/island/spotify.ts";
-import { buildSpotifyCard, buildSpotifyPill } from "../src/views/spotify.ts";
+import { SOUNDCLOUD_SOURCE, buildSpotifyCard, buildSpotifyPill } from "../src/views/spotify.ts";
 import { DEFAULT_SETTINGS, State } from "../src/core/state.ts";
 import { lookup, setLanguage } from "../src/i18n/i18n.ts";
 
@@ -177,6 +177,8 @@ beforeEach(() => {
   State.loadIntegrationTasks();
   Spotify.state = { ...IDLE_SPOTIFY };
   Spotify.artwork = null;
+  SoundCloud.state = { ...IDLE_SPOTIFY, installed: true };
+  SoundCloud.artwork = null;
   island.reveals = 0;
 });
 
@@ -301,4 +303,38 @@ test("the pill shows play/pause and next on hover, only with a track", () => {
   assert.equal(Spotify.state.playing, false);
   pill.el.fire("mouseleave");
   assert.ok(!pill.el.classList.contains("controls"));
+});
+
+// ── SoundCloud (the same views on a browser tab, src-tauri/src/soundcloud.rs) ──
+
+test("SoundCloud: its own player, events, controls and dance, apart from Spotify's", () => {
+  State.settings.activeIntegrations = [SOUNDCLOUD_ID];
+  State.loadIntegrationTasks();
+  const sc = () => State.tasks.find((x) => x.id === SOUNDCLOUD_ID);
+  emit("soundcloud", playing({ track: track({ id: "/org/kde/1", title: "Don Miguelo - Y Que Fue?", artist: "Someone", album: "" }) }));
+  assert.equal(sc().name, "Don Miguelo - Y Que Fue?");
+  assert.equal(Spotify.state.track, null, "Spotify's copy untouched");
+  assert.ok(State.spotifyPlaying && State.playingOn(SOUNDCLOUD_ID) && !State.playingOn(SPOTIFY_ID));
+  assert.equal(State.playingTrack.title, "Don Miguelo - Y Que Fue?");
+  assert.equal(island.reveals, 1);
+  assert.ok(islandDances({ music: true, state: "idle", mode: "expanded", view: "overview", focusId: SOUNDCLOUD_ID }));
+
+  const card = buildSpotifyCard(SOUNDCLOUD_SOURCE);
+  card.sync();
+  const [, , play, next] = card.el.querySelector("np-buttons").children;
+  const before = sent("soundcloud_control").length;
+  next.fire("click");
+  play.fire("click");
+  assert.deepEqual(sent("soundcloud_control").slice(before), [
+    { action: "next", value: null },
+    { action: "playPause", value: null },
+  ]);
+  assert.equal(SoundCloud.state.playing, false);
+
+  emit("soundcloud", { ...IDLE_SPOTIFY, installed: true });
+  card.sync();
+  assert.match(card.el.textContent, /SoundCloud.*Not playing.*Open SoundCloud/);
+  card.el.find("BUTTON")[0].fire("click");
+  assert.ok(sent("soundcloud_open").length > 0);
+  assert.equal(sc().name, "SoundCloud");
 });

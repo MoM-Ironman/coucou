@@ -35,6 +35,7 @@ mod settings;
 mod shortcuts;
 mod sounds;
 mod speech;
+mod soundcloud;
 mod spotify;
 mod tray;
 mod update;
@@ -134,6 +135,7 @@ fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
     }
     integrations::settings_saved(&app, &settings.active_integrations);
     spotify::sync(&app, &settings.active_integrations);
+    soundcloud::sync(&app, &settings.active_integrations);
     whatsapp::sync(&settings.active_integrations);
     if shortcuts_changed {
         shortcuts::apply(&app, &settings.shortcuts);
@@ -1006,6 +1008,9 @@ pub fn run() {
             spotify::spotify_control,
             spotify::spotify_open,
             spotify::spotify_installed,
+            soundcloud::soundcloud_refresh,
+            soundcloud::soundcloud_control,
+            soundcloud::soundcloud_open,
             whatsapp::whatsapp_island,
             whatsapp::whatsapp_open,
             whatsapp::whatsapp_close,
@@ -1103,6 +1108,7 @@ pub fn run() {
             integrations::start(handle.clone());
             mail::start(handle.clone());
             spotify::sync(&handle, &loaded.active_integrations);
+            soundcloud::sync(&handle, &loaded.active_integrations);
             // WhatsApp (experimental): nothing runs unless it is turned on and its pill is active.
             whatsapp::start(&handle, &loaded.active_integrations);
             shortcuts::apply(&handle, &loaded.shortcuts);
